@@ -1,0 +1,16 @@
+sh sleep 1
+h1 python3 send.py 10.1.0.3 "h2-default" --tunnel 2
+h1 python3 send.py 10.1.0.3 "h3-default" --tunnel 3
+h1 python3 send.py 10.1.0.3 "exact-budget" --tunnel 3 --hops 2
+h1 python3 send.py 10.1.0.3 "zero-budget" --tunnel 3 --hops 0
+h1 python3 send.py 10.1.0.3 "one-budget" --tunnel 3 --hops 1
+h1 python3 send.py 10.1.0.3 "max-budget" --tunnel 2 --hops 255
+h1 ping -c 2 h3
+sh sleep 1
+sh echo === h2 receiver ===
+sh cat logs/h2.txt
+sh echo === h3 receiver ===
+sh cat logs/h3.txt
+sh mkdir -p assignment/evidence/delivery
+sh cp logs/s1.txt logs/s2.txt logs/h2.txt logs/h3.txt assignment/evidence/delivery/
+exit
