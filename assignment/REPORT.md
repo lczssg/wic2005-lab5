@@ -83,6 +83,12 @@ also demonstrates that tunnel routing can deliver to h2 despite the inner IP
 destination naming h3. `evidence/host-check.txt` checks the host wire layout,
 decoder output and CLI bounds separately from network behavior.
 
+The additional `evidence/malformed.txt` run sends a complete five-byte tunnel
+header promising IPv4 but omits IPv4 itself. BMv2 reports `PacketTooShort`, the
+parser-error guard is true, and the frame is dropped at s1. Processing counts
+are **1/0**, confirming it never reaches s2. The corresponding raw logs are in
+`evidence/malformed/`.
+
 In the fresh network of `evidence/loop-after.txt`, the same exit-3 loop with
 H=4 stops at s1 **3**, s2 **2**. Counts remain identical after another five
 seconds. The complete trace in `evidence/loop-after/` shows two forwards per
@@ -224,6 +230,7 @@ end-of-course submission; it is kept separately from the public repository.
 | `evidence/mixed.txt` and `mixed/` | C5 captures, parser/checksum behavior and stable mixed-loop counts |
 | `evidence/host-check.txt` | Host wire layout, decoder display and invalid CLI input bounds |
 | `evidence/compile-local.txt` | Final Codespace compiler command and successful result |
+| `evidence/malformed.txt` and `malformed/` | Truncated IPv4 parser-error case, dropped at s1 |
 
 Base-lab experiments and wrap-up answers are in `../LAB-NOTES.md` and
 `../lab-evidence/`. `../replay.py` echoes commands and uses the unchanged

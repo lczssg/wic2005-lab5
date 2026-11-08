@@ -1,0 +1,7 @@
+h1 python3 -c "from scapy.all import Ether, Raw, sendp; sendp(Ether(dst='ff:ff:ff:ff:ff:ff', type=0x1212)/Raw(bytes.fromhex('0800000304')), iface='h1-eth0', verbose=False)"
+sh sleep 1
+sh grep -c "Processing packet received" logs/s1.txt logs/s2.txt
+sh grep -n -E "PacketTooShort|parser_error|Dropping|Transmitting" logs/s1.txt
+sh mkdir -p assignment/evidence/malformed
+sh cp logs/s1.txt logs/s2.txt assignment/evidence/malformed/
+exit
