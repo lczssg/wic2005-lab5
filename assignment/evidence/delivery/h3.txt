@@ -1,0 +1,3 @@
+Listening on h3-eth0...
+Received (tunnelled, dst_id=3, hops=2) from 10.1.0.1 to 10.1.0.3, TTL 64: 'h3-default'
+Received (tunnelled, dst_id=3, hops=0) from 10.1.0.1 to 10.1.0.3, TTL 64: 'exact-budget'

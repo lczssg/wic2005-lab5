@@ -1,0 +1,115 @@
+Run started (UTC): 2026-11-08T16:50:33.295988+00:00
+*** Compiling tunnel.p4
+*** Configuring hosts
+h1 h2 h3 
+*** Starting controller
+
+*** Starting 2 switches
+s1 s2 
+*** s1: 6 table entries added
+*** s2: 6 table entries added
+*** Your hosts: h1 10.1.0.1, h2 10.1.0.2, h3 10.1.0.3
+*** Ready. Switch logs: logs/s1.txt, logs/s2.txt. What h2 and h3 receive: logs/h2.txt, logs/h3.txt
+*** Starting CLI:
+mininet> sh ./p4cli s2 table_dump MyIngress.myTunnel_exact
+Done
+==========
+TABLE ENTRIES
+**********
+Dumping entry 0x0
+Match key:
+* myTunnel.dst_id     : EXACT     0001
+Action entry: MyIngress.myTunnel_forward - 01
+**********
+Dumping entry 0x1
+Match key:
+* myTunnel.dst_id     : EXACT     0002
+Action entry: MyIngress.myTunnel_forward - 02
+**********
+Dumping entry 0x2
+Match key:
+* myTunnel.dst_id     : EXACT     0003
+Action entry: MyIngress.myTunnel_forward - 03
+==========
+Dumping default entry
+Action entry: MyIngress.drop - 
+==========
+mininet> sh ./p4cli s2 "table_modify MyIngress.myTunnel_exact MyIngress.myTunnel_forward 2 1"
+Done
+Modifying entry 2 for exact match table MyIngress.myTunnel_exact
+mininet> h1 python3 send.py 10.1.0.3 "loop" --tunnel 3 --hops 4
+###[ Ethernet ]### 
+  dst       = ff:ff:ff:ff:ff:ff
+  src       = 00:00:00:00:00:01
+  type      = 0x1212
+###[ MyTunnel ]### 
+     proto_id  = 2048
+     dst_id    = 3
+     hops      = 4
+###[ IP ]### 
+        version   = 4
+        ihl       = 5
+        tos       = 0x0
+        len       = 32
+        id        = 1
+        flags     = 
+        frag      = 0
+        ttl       = 64
+        proto     = udp
+        chksum    = 0x66c7
+        src       = 10.1.0.1
+        dst       = 10.1.0.3
+        \options   \
+###[ UDP ]### 
+           sport     = 4321
+           dport     = 4321
+           len       = 12
+           chksum    = 0xee2e
+###[ Raw ]### 
+              load      = 'loop'
+
+Sent from h1-eth0.
+mininet> sh sleep 1
+mininet> sh date -u
+Sun Nov  8 16:50:36 UTC 2026
+mininet> sh grep -c "Processing packet received" logs/s1.txt logs/s2.txt
+logs/s1.txt:3
+logs/s2.txt:2
+mininet> sh sleep 5
+mininet> sh date -u
+Sun Nov  8 16:50:41 UTC 2026
+mininet> sh grep -c "Processing packet received" logs/s1.txt logs/s2.txt
+logs/s1.txt:3
+logs/s2.txt:2
+mininet> sh grep -n -E "Processing packet received|hops|Dropping|Transmitting" logs/s1.txt logs/s2.txt
+logs/s1.txt:54:[16:50:35.033] [bmv2] [D] [thread 15070] [0.0] [cxt 0] Processing packet received on port 1
+logs/s1.txt:72:[16:50:35.033] [bmv2] [T] [thread 15070] [0.0] [cxt 0] tunnel.p4(127) Condition "hdr.myTunnel.hops == 0" (node_5) is false
+logs/s1.txt:79:[16:50:35.033] [bmv2] [T] [thread 15070] [0.0] [cxt 0] tunnel.p4(130) Primitive hdr.myTunnel.hops = hdr.myTunnel.hops - 1
+logs/s1.txt:103:[16:50:35.034] [bmv2] [D] [thread 15075] [0.0] [cxt 0] Transmitting packet of size 51 out of port 2
+logs/s1.txt:104:[16:50:35.037] [bmv2] [D] [thread 15070] [1.0] [cxt 0] Processing packet received on port 2
+logs/s1.txt:122:[16:50:35.039] [bmv2] [T] [thread 15070] [1.0] [cxt 0] tunnel.p4(127) Condition "hdr.myTunnel.hops == 0" (node_5) is false
+logs/s1.txt:129:[16:50:35.039] [bmv2] [T] [thread 15070] [1.0] [cxt 0] tunnel.p4(130) Primitive hdr.myTunnel.hops = hdr.myTunnel.hops - 1
+logs/s1.txt:153:[16:50:35.039] [bmv2] [D] [thread 15075] [1.0] [cxt 0] Transmitting packet of size 51 out of port 2
+logs/s1.txt:154:[16:50:35.043] [bmv2] [D] [thread 15070] [2.0] [cxt 0] Processing packet received on port 2
+logs/s1.txt:172:[16:50:35.043] [bmv2] [T] [thread 15070] [2.0] [cxt 0] tunnel.p4(127) Condition "hdr.myTunnel.hops == 0" (node_5) is true
+logs/s1.txt:182:[16:50:35.044] [bmv2] [D] [thread 15070] [2.0] [cxt 0] Dropping packet at the end of ingress
+logs/s2.txt:66:[16:50:35.035] [bmv2] [D] [thread 15087] [0.0] [cxt 0] Processing packet received on port 1
+logs/s2.txt:84:[16:50:35.036] [bmv2] [T] [thread 15087] [0.0] [cxt 0] tunnel.p4(127) Condition "hdr.myTunnel.hops == 0" (node_5) is false
+logs/s2.txt:91:[16:50:35.036] [bmv2] [T] [thread 15087] [0.0] [cxt 0] tunnel.p4(130) Primitive hdr.myTunnel.hops = hdr.myTunnel.hops - 1
+logs/s2.txt:115:[16:50:35.037] [bmv2] [D] [thread 15092] [0.0] [cxt 0] Transmitting packet of size 51 out of port 1
+logs/s2.txt:116:[16:50:35.039] [bmv2] [D] [thread 15087] [1.0] [cxt 0] Processing packet received on port 1
+logs/s2.txt:134:[16:50:35.040] [bmv2] [T] [thread 15087] [1.0] [cxt 0] tunnel.p4(127) Condition "hdr.myTunnel.hops == 0" (node_5) is false
+logs/s2.txt:141:[16:50:35.040] [bmv2] [T] [thread 15087] [1.0] [cxt 0] tunnel.p4(130) Primitive hdr.myTunnel.hops = hdr.myTunnel.hops - 1
+logs/s2.txt:165:[16:50:35.042] [bmv2] [D] [thread 15092] [1.0] [cxt 0] Transmitting packet of size 51 out of port 1
+mininet> sh mkdir -p assignment/evidence/loop-after
+mininet> sh cp logs/s1.txt logs/s2.txt assignment/evidence/loop-after/
+mininet> exit
+*** Stopping 0 controllers
+
+*** Stopping 4 links
+....
+*** Stopping 2 switches
+s1 s2 
+*** Stopping 3 hosts
+h1 h2 h3 
+*** Done

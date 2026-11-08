@@ -67,12 +67,66 @@ can be imported for the small `check_wire.py` check.
 
 ## 4. Evidence: it works
 
-Runtime validation pending. This section will be completed from actual C4 runs.
+`evidence/delivery.txt` records the actual C4 run:
+
+| Probe | Receiver observation |
+|---|---|
+| Default H=4, exit 2, IP destination 10.1.0.3 | h2 prints `h2-default`, hops **2**, TTL **64** |
+| Default H=4, exit 3 | h3 prints `h3-default`, hops **2**, TTL **64** |
+| H=2, exit 3 | h3 prints `exact-budget`, hops **0**, TTL **64** |
+| H=0 and H=1, exit 3 | Neither receiver prints either marker; switch logs show the zero guard dropping them |
+| H=255, exit 2 | h2 prints `max-budget`, hops **253**, TTL **64** |
+| Plain `h1 ping -c 2 h3` | **2/2** replies, **0%** loss, reply TTL **62** |
+
+The receiver and full switch logs are retained in `evidence/delivery/`. This
+also demonstrates that tunnel routing can deliver to h2 despite the inner IP
+destination naming h3. `evidence/host-check.txt` checks the host wire layout,
+decoder output and CLI bounds separately from network behavior.
+
+In the fresh network of `evidence/loop-after.txt`, the same exit-3 loop with
+H=4 stops at s1 **3**, s2 **2**. Counts remain identical after another five
+seconds. The complete trace in `evidence/loop-after/` shows two forwards per
+switch and a final zero-guard drop at s1. Thus there are five processing events,
+of which four forward the packet: exactly the C2 convention, without wraparound.
 
 ## 5. Evaluation
 
-Mixed-rollout prediction and experiment pending. The prediction will be recorded
-and committed before running s1 new / s2 old.
+### a. Prediction recorded before the mixed run
+
+This prediction is committed before running `--s2-program tunnel_v1.p4`.
+For the first probe I will send `10.1.0.3 "mixed" --tunnel 2 --hops 4`.
+s1 emits the prefix `08 00 00 02 03 45 00 00 21 ...`: it has reduced hops to 3.
+Old s2 still extracts the first four tunnel bytes correctly, then starts its
+20-byte IPv4 extraction at **03**, one byte early. Its apparent IPv4 version
+is 0, IHL 3, TTL 0 and protocol 64. It does not validate version/IHL. The exit
+lookup should still hit 2, and s2 should not decrement the real hop byte.
+
+Crucially, the old checksum block runs for any valid extracted IPv4 header,
+even on the tunnel path. Its checksum byte positions now overlap the real
+IPv4 protocol byte and first checksum byte. It may corrupt those bytes.
+A one's-complement calculation using the predicted IPv4 bytes
+`45 00 00 21 00 01 00 00 40 11 66 c6 0a 01 00 01 0a 01 00 03`
+gives a special case: inserting hop **3** and omitting the last IPv4 octet **3**
+leaves the shifted checksum valid. The legacy checksum is **0x1166**, the
+same two bytes already there. I therefore predict that this default probe
+can reach h2 and print **hops=3**, TTL 64, despite the incorrect legacy parse.
+
+For a second identical `mixed` message with initial **H=5**, s1 emits hops 4.
+The same calculation predicts legacy checksum **0x1066**, changing the real
+IPv4 protocol from **0x11 (UDP)** to **0x10**. A frame should reach h2, but the
+UDP-only receiver should not print it. I will capture both frames, rather than
+treat an empty receiver log as proof of no frame delivery.
+
+For the exit-3 mixed loop with H=4, only s1 reduces the budget. I predict
+**5 new processing events on s1 and 4 on s2**, eight forwards and a final s1
+drop. The delivery probes will already have incremented the counters, so I
+will record a baseline and compare deltas. No loop containing only old switches
+would have a bound from this new field.
+
+### Mixed-run observations
+
+Pending actual run. Rollout, control-plane comparison and hardware evaluation
+will be completed after inspecting the measured behavior.
 
 ## AI use
 

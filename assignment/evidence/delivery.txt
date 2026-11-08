@@ -1,0 +1,239 @@
+Run started (UTC): 2026-11-08T16:50:06.722440+00:00
+*** Compiling tunnel.p4
+*** Configuring hosts
+h1 h2 h3 
+*** Starting controller
+
+*** Starting 2 switches
+s1 s2 
+*** s1: 6 table entries added
+*** s2: 6 table entries added
+*** Your hosts: h1 10.1.0.1, h2 10.1.0.2, h3 10.1.0.3
+*** Ready. Switch logs: logs/s1.txt, logs/s2.txt. What h2 and h3 receive: logs/h2.txt, logs/h3.txt
+*** Starting CLI:
+mininet> sh sleep 1
+mininet> h1 python3 send.py 10.1.0.3 "h2-default" --tunnel 2
+###[ Ethernet ]### 
+  dst       = ff:ff:ff:ff:ff:ff
+  src       = 00:00:00:00:00:01
+  type      = 0x1212
+###[ MyTunnel ]### 
+     proto_id  = 2048
+     dst_id    = 2
+     hops      = 4
+###[ IP ]### 
+        version   = 4
+        ihl       = 5
+        tos       = 0x0
+        len       = 38
+        id        = 1
+        flags     = 
+        frag      = 0
+        ttl       = 64
+        proto     = udp
+        chksum    = 0x66c1
+        src       = 10.1.0.1
+        dst       = 10.1.0.3
+        \options   \
+###[ UDP ]### 
+           sport     = 4321
+           dport     = 4321
+           len       = 18
+           chksum    = 0x11c
+###[ Raw ]### 
+              load      = 'h2-default'
+
+Sent from h1-eth0.
+mininet> h1 python3 send.py 10.1.0.3 "h3-default" --tunnel 3
+###[ Ethernet ]### 
+  dst       = ff:ff:ff:ff:ff:ff
+  src       = 00:00:00:00:00:01
+  type      = 0x1212
+###[ MyTunnel ]### 
+     proto_id  = 2048
+     dst_id    = 3
+     hops      = 4
+###[ IP ]### 
+        version   = 4
+        ihl       = 5
+        tos       = 0x0
+        len       = 38
+        id        = 1
+        flags     = 
+        frag      = 0
+        ttl       = 64
+        proto     = udp
+        chksum    = 0x66c1
+        src       = 10.1.0.1
+        dst       = 10.1.0.3
+        \options   \
+###[ UDP ]### 
+           sport     = 4321
+           dport     = 4321
+           len       = 18
+           chksum    = 0x11b
+###[ Raw ]### 
+              load      = 'h3-default'
+
+Sent from h1-eth0.
+mininet> h1 python3 send.py 10.1.0.3 "exact-budget" --tunnel 3 --hops 2
+###[ Ethernet ]### 
+  dst       = ff:ff:ff:ff:ff:ff
+  src       = 00:00:00:00:00:01
+  type      = 0x1212
+###[ MyTunnel ]### 
+     proto_id  = 2048
+     dst_id    = 3
+     hops      = 2
+###[ IP ]### 
+        version   = 4
+        ihl       = 5
+        tos       = 0x0
+        len       = 40
+        id        = 1
+        flags     = 
+        frag      = 0
+        ttl       = 64
+        proto     = udp
+        chksum    = 0x66bf
+        src       = 10.1.0.1
+        dst       = 10.1.0.3
+        \options   \
+###[ UDP ]### 
+           sport     = 4321
+           dport     = 4321
+           len       = 20
+           chksum    = 0x62a4
+###[ Raw ]### 
+              load      = 'exact-budget'
+
+Sent from h1-eth0.
+mininet> h1 python3 send.py 10.1.0.3 "zero-budget" --tunnel 3 --hops 0
+###[ Ethernet ]### 
+  dst       = ff:ff:ff:ff:ff:ff
+  src       = 00:00:00:00:00:01
+  type      = 0x1212
+###[ MyTunnel ]### 
+     proto_id  = 2048
+     dst_id    = 3
+     hops      = 0
+###[ IP ]### 
+        version   = 4
+        ihl       = 5
+        tos       = 0x0
+        len       = 39
+        id        = 1
+        flags     = 
+        frag      = 0
+        ttl       = 64
+        proto     = udp
+        chksum    = 0x66c0
+        src       = 10.1.0.1
+        dst       = 10.1.0.3
+        \options   \
+###[ UDP ]### 
+           sport     = 4321
+           dport     = 4321
+           len       = 19
+           chksum    = 0x5eff
+###[ Raw ]### 
+              load      = 'zero-budget'
+
+Sent from h1-eth0.
+mininet> h1 python3 send.py 10.1.0.3 "one-budget" --tunnel 3 --hops 1
+###[ Ethernet ]### 
+  dst       = ff:ff:ff:ff:ff:ff
+  src       = 00:00:00:00:00:01
+  type      = 0x1212
+###[ MyTunnel ]### 
+     proto_id  = 2048
+     dst_id    = 3
+     hops      = 1
+###[ IP ]### 
+        version   = 4
+        ihl       = 5
+        tos       = 0x0
+        len       = 38
+        id        = 1
+        flags     = 
+        frag      = 0
+        ttl       = 64
+        proto     = udp
+        chksum    = 0x66c1
+        src       = 10.1.0.1
+        dst       = 10.1.0.3
+        \options   \
+###[ UDP ]### 
+           sport     = 4321
+           dport     = 4321
+           len       = 18
+           chksum    = 0xc915
+###[ Raw ]### 
+              load      = 'one-budget'
+
+Sent from h1-eth0.
+mininet> h1 python3 send.py 10.1.0.3 "max-budget" --tunnel 2 --hops 255
+###[ Ethernet ]### 
+  dst       = ff:ff:ff:ff:ff:ff
+  src       = 00:00:00:00:00:01
+  type      = 0x1212
+###[ MyTunnel ]### 
+     proto_id  = 2048
+     dst_id    = 2
+     hops      = 255
+###[ IP ]### 
+        version   = 4
+        ihl       = 5
+        tos       = 0x0
+        len       = 38
+        id        = 1
+        flags     = 
+        frag      = 0
+        ttl       = 64
+        proto     = udp
+        chksum    = 0x66c1
+        src       = 10.1.0.1
+        dst       = 10.1.0.3
+        \options   \
+###[ UDP ]### 
+           sport     = 4321
+           dport     = 4321
+           len       = 18
+           chksum    = 0xb822
+###[ Raw ]### 
+              load      = 'max-budget'
+
+Sent from h1-eth0.
+mininet> h1 ping -c 2 h3
+PING 10.1.0.3 (10.1.0.3) 56(84) bytes of data.
+64 bytes from 10.1.0.3: icmp_seq=1 ttl=62 time=5.21 ms
+64 bytes from 10.1.0.3: icmp_seq=2 ttl=62 time=4.31 ms
+
+--- 10.1.0.3 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1001ms
+rtt min/avg/max/mdev = 4.306/4.756/5.207/0.450 ms
+mininet> sh sleep 1
+mininet> sh echo === h2 receiver ===
+=== h2 receiver ===
+mininet> sh cat logs/h2.txt
+Listening on h2-eth0...
+Received (tunnelled, dst_id=2, hops=2) from 10.1.0.1 to 10.1.0.3, TTL 64: 'h2-default'
+Received (tunnelled, dst_id=2, hops=253) from 10.1.0.1 to 10.1.0.3, TTL 64: 'max-budget'
+mininet> sh echo === h3 receiver ===
+=== h3 receiver ===
+mininet> sh cat logs/h3.txt
+Listening on h3-eth0...
+Received (tunnelled, dst_id=3, hops=2) from 10.1.0.1 to 10.1.0.3, TTL 64: 'h3-default'
+Received (tunnelled, dst_id=3, hops=0) from 10.1.0.1 to 10.1.0.3, TTL 64: 'exact-budget'
+mininet> sh mkdir -p assignment/evidence/delivery
+mininet> sh cp logs/s1.txt logs/s2.txt logs/h2.txt logs/h3.txt assignment/evidence/delivery/
+mininet> exit
+*** Stopping 0 controllers
+
+*** Stopping 4 links
+....
+*** Stopping 2 switches
+s1 s2 
+*** Stopping 3 hosts
+h1 h2 h3 
+*** Done
