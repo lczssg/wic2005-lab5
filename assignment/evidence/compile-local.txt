@@ -1,0 +1,3 @@
++ p4c-bm2-ss -o build/tunnel.json tunnel.p4
++ echo 'PASS: tunnel.p4 compiled with p4c-bm2-ss'
+PASS: tunnel.p4 compiled with p4c-bm2-ss

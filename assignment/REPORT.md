@@ -125,8 +125,82 @@ would have a bound from this new field.
 
 ### Mixed-run observations
 
-Pending actual run. Rollout, control-plane comparison and hardware evaluation
-will be completed after inspecting the measured behavior.
+`evidence/mixed.txt` starts at **16:53:22 UTC**, after prediction commit
+`280401b`. Both programs compiled and loaded six table entries per switch.
+The actual results match the prediction:
+
+| Probe | Capture and receiver evidence |
+|---|---|
+| H=4, message `mixed`, exit 2 | Frame reaches h2; bytes include `0002 0345 ... 0040 1166 c60a`. Receiver prints **hops=3**, TTL 64. |
+| H=5, same message and exit | Frame reaches h2; bytes instead include `0002 0445 ... 0040 1066 c60a`. Receiver log gains **no second delivery**. |
+| Mixed loop, H=4 | Baseline **2/2** after the probes; then **7/6**, unchanged after five seconds. Delta **5/4**, eight forwards then drop on s1. |
+
+The full captures are `evidence/mixed/h2cap-h4.txt` and `h2cap-h5.txt`.
+At Ethernet byte offset 18 is the new hop byte. True IPv4 starts at 19, while
+the legacy parser starts at 18. Its checksum positions are therefore bytes
+28–29, the real IPv4 protocol and high checksum byte. H=5 changes byte 28 from
+0x11 to 0x10; the real IPv4 checksum is then also inconsistent with its changed
+protocol. The UDP-only receiver cannot decode this as the expected UDP message.
+For H=4, those bytes happen to stay unchanged. This accidental success is not
+wire-format compatibility. The s2 log confirms `parse_myTunnel` selects 0800,
+the tunnel lookup still uses 0002/0003, and the checksum block runs on the
+misaligned IPv4 extraction. All raw switch and receiver logs are in
+`evidence/mixed/`.
+
+The loop bound is weaker during rollout: only an upgraded switch consumes the
+budget. Here every circuit returns to s1, so it eventually drops. A cycle wholly
+inside old switches can run forever, and H no longer means H physical forwards.
+The first probe's successful delivery alone would have hidden both problems.
+
+### b. Safe rollout options
+
+| Option | Deployment sequence and tradeoff |
+|---|---|
+| New EtherType with dual-format support | Reserve a distinct v2 type. First upgrade switches and receivers to recognize both layouts while senders still emit v1. Verify every switch on each eligible path supports v2, including failure paths; only then switch those senders. Drain v1 traffic before removing its parser. This permits staged service, but needs temporary dual parsers, configuration/version inventory and format-aware tests. An old switch receiving an unknown type drops in this lab, rather than silently misparsing it. Premature activation can still cause outages, so the capability barrier is essential. |
+| Drain and coordinated cutover | Stop tunnel injection, drain or deliberately discard old in-flight packets, load the new program on all path switches, update host decoders and senders, verify tables, then resume with small probes. This avoids simultaneous format support but causes downtime and needs coordinated rollback. Queued old-format traffic must not be released into the new parser. |
+
+I would use the first option where continuity matters and the second for a small
+lab/maintenance window. Merely appending a field preserves the tunnel lookup
+prefix but does not preserve the following IPv4 offset. A new version byte also
+cannot rescue a parser that was never programmed to recognize it: a discriminator
+and dual-format handling must be designed or predeployed before new traffic.
+During migration, validate old-format paths and do not claim a network-wide hop
+bound until every relevant forwarder enforces it.
+
+### c. Data plane and control plane
+
+Week 3's `check_paths()` can inspect a modeled forwarding graph before deployment,
+detect cycles or dead ends and explain a bad path without first injecting traffic.
+For this tunnel it would need the exit-ID table model; an IPv4-only model does not
+describe `myTunnel_exact`. Its result is only as accurate and current as the model
+and installation state. It can miss transient inconsistent updates, unexpected
+failover or unmodeled/stale device entries.
+
+The hop field limits what a real packet can do under the installed data plane,
+without a controller reacting to every loop. It covers those transient cases if
+the actual path enforces decrement and zero-drop. It does not find or repair the
+wrong entry, prove destination reachability, prevent a black hole, or distinguish
+a loop from a valid path exceeding the budget. Old-only cycles and reset/ignored
+hop fields defeat its assumption. Real systems need predeployment path validation,
+safe update procedures and an independent packet-lifetime bound together.
+
+### d. Cost on a hardware switch at line rate
+
+The tunnel header grows **32 → 40 bits**, adding eight header-vector bits and one
+byte for parser extraction and deparser emission. When the frame really grows,
+serialization uses another 8/R seconds at link rate R; Ethernet padding and MTU
+boundaries affect the actual wire cost. This also reduces payload headroom near
+the MTU. No new match key, table entries, SRAM/TCAM allocation, register or
+per-flow state is required by this design.
+
+Ingress needs a zero comparison, an eight-bit subtraction and conditional drop/
+table selection; the defensive parser-error comparison uses existing architecture
+metadata. The dependent operations need available ALUs/PHV routing and may affect
+stage placement. I cannot infer an exact stage count or throughput from BMv2.
+The compiler for the actual ASIC must confirm that it fits and sustains line rate.
+The existing IPv4 checksum operation remains present; the hop byte is outside the
+IPv4 header, so no new checksum is introduced for it. Operational costs include
+host format changes, migration/testing and the temporary dual-format resources.
 
 ## AI use
 
@@ -145,6 +219,18 @@ end-of-course submission; it is kept separately from the public repository.
 |---|---|
 | `evidence/loop-before.txt` | Real v1 loop and increasing processing counts |
 | `evidence/loop-before-s1-sample.txt`, `loop-before-s2-sample.txt` | Bounded samples of the original loop parser/table trace |
-| `evidence/delivery.txt` | Pending C4 tunnel and plain IPv4 results |
-| `evidence/loop-after.txt` | Pending C4 bounded loop results |
-| `evidence/mixed.txt` | Pending C5 mixed-program results |
+| `evidence/delivery.txt` and `delivery/` | C4 tunnel, budget boundaries and plain IPv4 results |
+| `evidence/loop-after.txt` and `loop-after/` | C4 stable 3/2 processing counts and final s1 drop |
+| `evidence/mixed.txt` and `mixed/` | C5 captures, parser/checksum behavior and stable mixed-loop counts |
+| `evidence/host-check.txt` | Host wire layout, decoder display and invalid CLI input bounds |
+| `evidence/compile-local.txt` | Final Codespace compiler command and successful result |
+
+Base-lab experiments and wrap-up answers are in `../LAB-NOTES.md` and
+`../lab-evidence/`. `../replay.py` echoes commands and uses the unchanged
+Mininet topology via its native CLI script input. Each run archives its logs;
+the runner clears append-only switch logs before the next fresh network.
+
+Requirements checked: [Spectrum submission](https://spectrum.um.edu.my/mod/assign/view.php?id=1148969),
+[teacher's Week 5 instructions](https://firdaussahran.github.io/wic2005/weeks/week-05/).
+Spectrum specifies **13 November 2026 00:00 Asia/Kuala_Lumpur (UTC+8)** and a PR
+link, with a green **Compile tunnel.p4** check. The PR is kept open for review.
