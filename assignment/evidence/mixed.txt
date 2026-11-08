@@ -1,0 +1,254 @@
+Run started (UTC): 2026-11-08T16:53:22.188008+00:00
+*** Compiling tunnel.p4
+*** Compiling tunnel_v1.p4
+*** Configuring hosts
+h1 h2 h3 
+*** Starting controller
+
+*** Starting 2 switches
+s1 s2 
+*** s1: 6 table entries added
+*** s2: 6 table entries added
+*** Your hosts: h1 10.1.0.1, h2 10.1.0.2, h3 10.1.0.3
+*** Mixed rollout: s1 runs tunnel.p4, s2 runs tunnel_v1.p4
+*** Ready. Switch logs: logs/s1.txt, logs/s2.txt. What h2 and h3 receive: logs/h2.txt, logs/h3.txt
+*** Starting CLI:
+mininet> sh sleep 1
+mininet> h2 timeout 8 tcpdump -c 1 -XX -ni h2-eth0 ether proto 0x1212 > logs/h2cap-h4.txt 2>&1 &
+mininet> sh sleep 1
+mininet> h1 python3 send.py 10.1.0.3 "mixed" --tunnel 2 --hops 4
+###[ Ethernet ]### 
+  dst       = ff:ff:ff:ff:ff:ff
+  src       = 00:00:00:00:00:01
+  type      = 0x1212
+###[ MyTunnel ]### 
+     proto_id  = 2048
+     dst_id    = 2
+     hops      = 4
+###[ IP ]### 
+        version   = 4
+        ihl       = 5
+        tos       = 0x0
+        len       = 33
+        id        = 1
+        flags     = 
+        frag      = 0
+        ttl       = 64
+        proto     = udp
+        chksum    = 0x66c6
+        src       = 10.1.0.1
+        dst       = 10.1.0.3
+        \options   \
+###[ UDP ]### 
+           sport     = 4321
+           dport     = 4321
+           len       = 13
+           chksum    = 0x803d
+###[ Raw ]### 
+              load      = 'mixed'
+
+Sent from h1-eth0.
+mininet> sh sleep 8
+mininet> sh cat logs/h2cap-h4.txt
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on h2-eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+16:53:25.748886 00:00:00:00:00:01 > ff:ff:ff:ff:ff:ff, ethertype Unknown (0x1212), length 52: 
+	0x0000:  ffff ffff ffff 0000 0000 0001 1212 0800  ................
+	0x0010:  0002 0345 0000 2100 0100 0040 1166 c60a  ...E..!....@.f..
+	0x0020:  0100 010a 0100 0310 e110 e100 0d80 3d6d  ..............=m
+	0x0030:  6978 6564                                ixed
+1 packet captured
+1 packet received by filter
+0 packets dropped by kernel
+mininet> sh cat logs/h2.txt
+Listening on h2-eth0...
+Received (tunnelled, dst_id=2, hops=3) from 10.1.0.1 to 10.1.0.3, TTL 64: 'mixed'
+mininet> h2 timeout 8 tcpdump -c 1 -XX -ni h2-eth0 ether proto 0x1212 > logs/h2cap-h5.txt 2>&1 &
+mininet> sh sleep 1
+mininet> h1 python3 send.py 10.1.0.3 "mixed" --tunnel 2 --hops 5
+###[ Ethernet ]### 
+  dst       = ff:ff:ff:ff:ff:ff
+  src       = 00:00:00:00:00:01
+  type      = 0x1212
+###[ MyTunnel ]### 
+     proto_id  = 2048
+     dst_id    = 2
+     hops      = 5
+###[ IP ]### 
+        version   = 4
+        ihl       = 5
+        tos       = 0x0
+        len       = 33
+        id        = 1
+        flags     = 
+        frag      = 0
+        ttl       = 64
+        proto     = udp
+        chksum    = 0x66c6
+        src       = 10.1.0.1
+        dst       = 10.1.0.3
+        \options   \
+###[ UDP ]### 
+           sport     = 4321
+           dport     = 4321
+           len       = 13
+           chksum    = 0x803d
+###[ Raw ]### 
+              load      = 'mixed'
+
+Sent from h1-eth0.
+mininet> sh sleep 8
+mininet> sh cat logs/h2cap-h5.txt
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on h2-eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+16:53:35.178298 00:00:00:00:00:01 > ff:ff:ff:ff:ff:ff, ethertype Unknown (0x1212), length 52: 
+	0x0000:  ffff ffff ffff 0000 0000 0001 1212 0800  ................
+	0x0010:  0002 0445 0000 2100 0100 0040 1066 c60a  ...E..!....@.f..
+	0x0020:  0100 010a 0100 0310 e110 e100 0d80 3d6d  ..............=m
+	0x0030:  6978 6564                                ixed
+1 packet captured
+1 packet received by filter
+0 packets dropped by kernel
+mininet> sh cat logs/h2.txt
+Listening on h2-eth0...
+Received (tunnelled, dst_id=2, hops=3) from 10.1.0.1 to 10.1.0.3, TTL 64: 'mixed'
+mininet> sh echo === processing baseline after two probes ===
+=== processing baseline after two probes ===
+mininet> sh grep -c "Processing packet received" logs/s1.txt logs/s2.txt
+logs/s1.txt:2
+logs/s2.txt:2
+mininet> sh ./p4cli s2 table_dump MyIngress.myTunnel_exact
+Done
+==========
+TABLE ENTRIES
+**********
+Dumping entry 0x0
+Match key:
+* myTunnel.dst_id     : EXACT     0001
+Action entry: MyIngress.myTunnel_forward - 01
+**********
+Dumping entry 0x1
+Match key:
+* myTunnel.dst_id     : EXACT     0002
+Action entry: MyIngress.myTunnel_forward - 02
+**********
+Dumping entry 0x2
+Match key:
+* myTunnel.dst_id     : EXACT     0003
+Action entry: MyIngress.myTunnel_forward - 03
+==========
+Dumping default entry
+Action entry: MyIngress.drop - 
+==========
+mininet> sh ./p4cli s2 "table_modify MyIngress.myTunnel_exact MyIngress.myTunnel_forward 2 1"
+Done
+Modifying entry 2 for exact match table MyIngress.myTunnel_exact
+mininet> h1 python3 send.py 10.1.0.3 "loop" --tunnel 3 --hops 4
+###[ Ethernet ]### 
+  dst       = ff:ff:ff:ff:ff:ff
+  src       = 00:00:00:00:00:01
+  type      = 0x1212
+###[ MyTunnel ]### 
+     proto_id  = 2048
+     dst_id    = 3
+     hops      = 4
+###[ IP ]### 
+        version   = 4
+        ihl       = 5
+        tos       = 0x0
+        len       = 32
+        id        = 1
+        flags     = 
+        frag      = 0
+        ttl       = 64
+        proto     = udp
+        chksum    = 0x66c7
+        src       = 10.1.0.1
+        dst       = 10.1.0.3
+        \options   \
+###[ UDP ]### 
+           sport     = 4321
+           dport     = 4321
+           len       = 12
+           chksum    = 0xee2e
+###[ Raw ]### 
+              load      = 'loop'
+
+Sent from h1-eth0.
+mininet> sh sleep 1
+mininet> sh date -u
+Sun Nov  8 16:53:44 UTC 2026
+mininet> sh grep -c "Processing packet received" logs/s1.txt logs/s2.txt
+logs/s1.txt:7
+logs/s2.txt:6
+mininet> sh sleep 5
+mininet> sh date -u
+Sun Nov  8 16:53:49 UTC 2026
+mininet> sh grep -c "Processing packet received" logs/s1.txt logs/s2.txt
+logs/s1.txt:7
+logs/s2.txt:6
+mininet> sh grep -n -E "parse_myTunnel|Extracting header|dst_id|Updating checksum|Dropping" logs/s2.txt
+35:* hdr.myTunnel.dst_id : EXACT     0001
+42:* hdr.myTunnel.dst_id : EXACT     0002
+49:* hdr.myTunnel.dst_id : EXACT     0003
+55:[16:53:25.747] [bmv2] [D] [thread 16686] [0.0] [cxt 0] Extracting header 'ethernet'
+58:[16:53:25.748] [bmv2] [D] [thread 16686] [0.0] [cxt 0] Parser 'parser' entering state 'parse_myTunnel'
+59:[16:53:25.748] [bmv2] [D] [thread 16686] [0.0] [cxt 0] Extracting header 'myTunnel'
+60:[16:53:25.748] [bmv2] [D] [thread 16686] [0.0] [cxt 0] Parser state 'parse_myTunnel': key is 0800
+63:[16:53:25.748] [bmv2] [D] [thread 16686] [0.0] [cxt 0] Extracting header 'ipv4'
+71:* hdr.myTunnel.dst_id : 0002
+76:* hdr.myTunnel.dst_id : EXACT     0002
+87:[16:53:25.748] [bmv2] [D] [thread 16689] [0.0] [cxt 0] Updating checksum 'cksum'
+96:[16:53:35.177] [bmv2] [D] [thread 16686] [1.0] [cxt 0] Extracting header 'ethernet'
+99:[16:53:35.177] [bmv2] [D] [thread 16686] [1.0] [cxt 0] Parser 'parser' entering state 'parse_myTunnel'
+100:[16:53:35.177] [bmv2] [D] [thread 16686] [1.0] [cxt 0] Extracting header 'myTunnel'
+101:[16:53:35.177] [bmv2] [D] [thread 16686] [1.0] [cxt 0] Parser state 'parse_myTunnel': key is 0800
+104:[16:53:35.177] [bmv2] [D] [thread 16686] [1.0] [cxt 0] Extracting header 'ipv4'
+112:* hdr.myTunnel.dst_id : 0002
+117:* hdr.myTunnel.dst_id : EXACT     0002
+128:[16:53:35.178] [bmv2] [D] [thread 16689] [1.0] [cxt 0] Updating checksum 'cksum'
+142:* hdr.myTunnel.dst_id : EXACT     0003
+148:[16:53:43.714] [bmv2] [D] [thread 16686] [2.0] [cxt 0] Extracting header 'ethernet'
+151:[16:53:43.714] [bmv2] [D] [thread 16686] [2.0] [cxt 0] Parser 'parser' entering state 'parse_myTunnel'
+152:[16:53:43.714] [bmv2] [D] [thread 16686] [2.0] [cxt 0] Extracting header 'myTunnel'
+153:[16:53:43.714] [bmv2] [D] [thread 16686] [2.0] [cxt 0] Parser state 'parse_myTunnel': key is 0800
+156:[16:53:43.714] [bmv2] [D] [thread 16686] [2.0] [cxt 0] Extracting header 'ipv4'
+164:* hdr.myTunnel.dst_id : 0003
+169:* hdr.myTunnel.dst_id : EXACT     0003
+180:[16:53:43.714] [bmv2] [D] [thread 16688] [2.0] [cxt 0] Updating checksum 'cksum'
+189:[16:53:43.716] [bmv2] [D] [thread 16686] [3.0] [cxt 0] Extracting header 'ethernet'
+192:[16:53:43.716] [bmv2] [D] [thread 16686] [3.0] [cxt 0] Parser 'parser' entering state 'parse_myTunnel'
+193:[16:53:43.716] [bmv2] [D] [thread 16686] [3.0] [cxt 0] Extracting header 'myTunnel'
+194:[16:53:43.716] [bmv2] [D] [thread 16686] [3.0] [cxt 0] Parser state 'parse_myTunnel': key is 0800
+197:[16:53:43.716] [bmv2] [D] [thread 16686] [3.0] [cxt 0] Extracting header 'ipv4'
+205:* hdr.myTunnel.dst_id : 0003
+210:* hdr.myTunnel.dst_id : EXACT     0003
+221:[16:53:43.716] [bmv2] [D] [thread 16688] [3.0] [cxt 0] Updating checksum 'cksum'
+230:[16:53:43.720] [bmv2] [D] [thread 16686] [4.0] [cxt 0] Extracting header 'ethernet'
+233:[16:53:43.720] [bmv2] [D] [thread 16686] [4.0] [cxt 0] Parser 'parser' entering state 'parse_myTunnel'
+234:[16:53:43.720] [bmv2] [D] [thread 16686] [4.0] [cxt 0] Extracting header 'myTunnel'
+235:[16:53:43.720] [bmv2] [D] [thread 16686] [4.0] [cxt 0] Parser state 'parse_myTunnel': key is 0800
+238:[16:53:43.720] [bmv2] [D] [thread 16686] [4.0] [cxt 0] Extracting header 'ipv4'
+246:* hdr.myTunnel.dst_id : 0003
+251:* hdr.myTunnel.dst_id : EXACT     0003
+262:[16:53:43.721] [bmv2] [D] [thread 16688] [4.0] [cxt 0] Updating checksum 'cksum'
+271:[16:53:43.724] [bmv2] [D] [thread 16686] [5.0] [cxt 0] Extracting header 'ethernet'
+274:[16:53:43.724] [bmv2] [D] [thread 16686] [5.0] [cxt 0] Parser 'parser' entering state 'parse_myTunnel'
+275:[16:53:43.724] [bmv2] [D] [thread 16686] [5.0] [cxt 0] Extracting header 'myTunnel'
+276:[16:53:43.724] [bmv2] [D] [thread 16686] [5.0] [cxt 0] Parser state 'parse_myTunnel': key is 0800
+279:[16:53:43.724] [bmv2] [D] [thread 16686] [5.0] [cxt 0] Extracting header 'ipv4'
+287:* hdr.myTunnel.dst_id : 0003
+292:* hdr.myTunnel.dst_id : EXACT     0003
+303:[16:53:43.725] [bmv2] [D] [thread 16688] [5.0] [cxt 0] Updating checksum 'cksum'
+mininet> sh mkdir -p assignment/evidence/mixed
+mininet> sh cp logs/s1.txt logs/s2.txt logs/h2.txt logs/h3.txt logs/h2cap-h4.txt logs/h2cap-h5.txt assignment/evidence/mixed/
+mininet> exit
+*** Stopping 0 controllers
+
+*** Stopping 4 links
+....
+*** Stopping 2 switches
+s1 s2 
+*** Stopping 3 hosts
+h1 h2 h3 
+*** Done

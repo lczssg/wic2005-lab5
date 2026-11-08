@@ -1,0 +1,28 @@
+sh sleep 1
+h2 timeout 8 tcpdump -c 1 -XX -ni h2-eth0 ether proto 0x1212 > logs/h2cap-h4.txt 2>&1 &
+sh sleep 1
+h1 python3 send.py 10.1.0.3 "mixed" --tunnel 2 --hops 4
+sh sleep 8
+sh cat logs/h2cap-h4.txt
+sh cat logs/h2.txt
+h2 timeout 8 tcpdump -c 1 -XX -ni h2-eth0 ether proto 0x1212 > logs/h2cap-h5.txt 2>&1 &
+sh sleep 1
+h1 python3 send.py 10.1.0.3 "mixed" --tunnel 2 --hops 5
+sh sleep 8
+sh cat logs/h2cap-h5.txt
+sh cat logs/h2.txt
+sh echo === processing baseline after two probes ===
+sh grep -c "Processing packet received" logs/s1.txt logs/s2.txt
+sh ./p4cli s2 table_dump MyIngress.myTunnel_exact
+sh ./p4cli s2 "table_modify MyIngress.myTunnel_exact MyIngress.myTunnel_forward 2 1"
+h1 python3 send.py 10.1.0.3 "loop" --tunnel 3 --hops 4
+sh sleep 1
+sh date -u
+sh grep -c "Processing packet received" logs/s1.txt logs/s2.txt
+sh sleep 5
+sh date -u
+sh grep -c "Processing packet received" logs/s1.txt logs/s2.txt
+sh grep -n -E "parse_myTunnel|Extracting header|dst_id|Updating checksum|Dropping" logs/s2.txt
+sh mkdir -p assignment/evidence/mixed
+sh cp logs/s1.txt logs/s2.txt logs/h2.txt logs/h3.txt logs/h2cap-h4.txt logs/h2cap-h5.txt assignment/evidence/mixed/
+exit

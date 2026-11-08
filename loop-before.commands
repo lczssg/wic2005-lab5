@@ -1,0 +1,11 @@
+sh ./p4cli s2 table_dump MyIngress.myTunnel_exact
+sh ./p4cli s2 "table_modify MyIngress.myTunnel_exact MyIngress.myTunnel_forward 2 1"
+h1 python3 send.py 10.1.0.3 "loop" --tunnel 3
+sh date -u
+sh grep -c "Processing packet received" logs/s1.txt logs/s2.txt
+sh sleep 5
+sh date -u
+sh grep -c "Processing packet received" logs/s1.txt logs/s2.txt
+sh head -n 200 logs/s1.txt > assignment/evidence/loop-before-s1-sample.txt
+sh head -n 200 logs/s2.txt > assignment/evidence/loop-before-s2-sample.txt
+exit
