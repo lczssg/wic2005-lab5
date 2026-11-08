@@ -1,0 +1,49 @@
+Script started on 2026-11-08 16:38:40+00:00 [COMMAND="python3 topo.py --id 6101" <not executed on terminal>]
+h1 ping -c 3 h2
+h1 ping -c 3 h3
+sh ./p4cli s2 table_dump MyIngress.ipv4_lpm
+sh ./p4cli s2 table_delete MyIngress.ipv4_lpm 2
+h1 ping -c 2 -W 1 h3
+sh ./p4cli s2 "table_add MyIngress.ipv4_lpm MyIngress.ipv4_forward 10.1.0.3/32 => 3"
+h1 ping -c 2 h3
+h1 python3 send.py 10.1.0.3 "test 1" --tunnel 2
+sh sleep 1
+sh cat logs/h2.txt logs/h3.txt
+sh grep -n -A 12 -B 4 'key is 1212' logs/s1.txt
+sh mkdir -p lab-evidence/steps-1-3
+sh cp logs/s1.txt logs/s2.txt logs/h2.txt logs/h3.txt lab-evidence/steps-1-3/
+exit
+*** Compiling tunnel.p4
+tunnel.p4(11): [--Wwarn=unused] warning: 'TYPE_MYTUNNEL' is unused
+const bit<16> TYPE_MYTUNNEL = 0x1212;
+              ^^^^^^^^^^^^^
+tunnel.p4(109): [--Wwarn=unused] warning: table 'myTunnel_exact' is unused
+    table myTunnel_exact {
+          ^^^^^^^^^^^^^^
+tunnel.p4(109): [--Winfo=removed] info: removing table 'myTunnel_exact'
+    table myTunnel_exact {
+          ^^^^^^^^^^^^^^
+*** Configuring hosts
+h1 h2 h3 
+*** Starting controller
+
+*** Starting 2 switches
+s1 s2 
+*** s1: MyIngress.myTunnel_exact isn't used by the program (yet), so its entries were skipped
+*** s1: 3 table entries added
+*** s2: MyIngress.myTunnel_exact isn't used by the program (yet), so its entries were skipped
+*** s2: 3 table entries added
+*** Your hosts: h1 10.1.0.1, h2 10.1.0.2, h3 10.1.0.3
+*** Ready. Switch logs: logs/s1.txt, logs/s2.txt. What h2 and h3 receive: logs/h2.txt, logs/h3.txt
+*** Starting CLI:
+mininet> h1 ping -c 3 h2
+PING 10.1.0.2 (10.1.0.2) 56(84) bytes of data.
+64 bytes from 10.1.0.2: icmp_seq=1 ttl=62 time=11.6 ms
+^D64 bytes from 10.1.0.2: icmp_seq=2 ttl=62 time=4.25 ms
+64 bytes from 10.1.0.2: icmp_seq=3 ttl=62 time=4.22 ms
+
+--- 10.1.0.2 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 4.219/6.696/11.622/3.482 ms
+mininet> 
+Script done on 2026-11-08 16:39:38+00:00 [COMMAND_EXIT_CODE="0"]

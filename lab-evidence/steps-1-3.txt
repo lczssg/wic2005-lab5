@@ -1,0 +1,153 @@
+*** Compiling tunnel.p4
+*** Configuring hosts
+h1 h2 h3 
+*** Starting controller
+
+*** Starting 2 switches
+s1 s2 
+*** s1: MyIngress.myTunnel_exact isn't used by the program (yet), so its entries were skipped
+*** s1: 3 table entries added
+*** s2: MyIngress.myTunnel_exact isn't used by the program (yet), so its entries were skipped
+*** s2: 3 table entries added
+*** Your hosts: h1 10.1.0.1, h2 10.1.0.2, h3 10.1.0.3
+*** Ready. Switch logs: logs/s1.txt, logs/s2.txt. What h2 and h3 receive: logs/h2.txt, logs/h3.txt
+*** Starting CLI:
+tunnel.p4(11): [--Wwarn=unused] warning: 'TYPE_MYTUNNEL' is unused
+const bit<16> TYPE_MYTUNNEL = 0x1212;
+              ^^^^^^^^^^^^^
+tunnel.p4(109): [--Wwarn=unused] warning: table 'myTunnel_exact' is unused
+    table myTunnel_exact {
+          ^^^^^^^^^^^^^^
+tunnel.p4(109): [--Winfo=removed] info: removing table 'myTunnel_exact'
+    table myTunnel_exact {
+          ^^^^^^^^^^^^^^
+mininet> h1 ping -c 3 h2
+PING 10.1.0.2 (10.1.0.2) 56(84) bytes of data.
+64 bytes from 10.1.0.2: icmp_seq=1 ttl=62 time=20.4 ms
+64 bytes from 10.1.0.2: icmp_seq=2 ttl=62 time=3.40 ms
+64 bytes from 10.1.0.2: icmp_seq=3 ttl=62 time=3.44 ms
+
+--- 10.1.0.2 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 3.398/9.084/20.415/8.012 ms
+mininet> h1 ping -c 3 h3
+PING 10.1.0.3 (10.1.0.3) 56(84) bytes of data.
+64 bytes from 10.1.0.3: icmp_seq=1 ttl=62 time=5.16 ms
+64 bytes from 10.1.0.3: icmp_seq=2 ttl=62 time=3.86 ms
+64 bytes from 10.1.0.3: icmp_seq=3 ttl=62 time=3.89 ms
+
+--- 10.1.0.3 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 3.860/4.303/5.162/0.607 ms
+mininet> sh ./p4cli s2 table_dump MyIngress.ipv4_lpm
+Done
+==========
+TABLE ENTRIES
+**********
+Dumping entry 0x0
+Match key:
+* ipv4.dstAddr        : LPM       0a010001/32
+Action entry: MyIngress.ipv4_forward - 01
+**********
+Dumping entry 0x1
+Match key:
+* ipv4.dstAddr        : LPM       0a010002/32
+Action entry: MyIngress.ipv4_forward - 02
+**********
+Dumping entry 0x2
+Match key:
+* ipv4.dstAddr        : LPM       0a010003/32
+Action entry: MyIngress.ipv4_forward - 03
+==========
+Dumping default entry
+Action entry: MyIngress.drop - 
+==========
+mininet> sh ./p4cli s2 table_delete MyIngress.ipv4_lpm 2
+Done
+Deleting entry 2 from MyIngress.ipv4_lpm
+mininet> h1 ping -c 2 -W 1 h3
+PING 10.1.0.3 (10.1.0.3) 56(84) bytes of data.
+
+--- 10.1.0.3 ping statistics ---
+2 packets transmitted, 0 received, 100% packet loss, time 1030ms
+
+mininet> sh ./p4cli s2 "table_add MyIngress.ipv4_lpm MyIngress.ipv4_forward 10.1.0.3/32 => 3"
+Done
+Adding entry to lpm match table MyIngress.ipv4_lpm
+match key:           LPM-0a:01:00:03/32
+action:              MyIngress.ipv4_forward
+runtime data:        00:03
+Entry has been added with handle 16777218
+mininet> h1 ping -c 2 h3
+PING 10.1.0.3 (10.1.0.3) 56(84) bytes of data.
+64 bytes from 10.1.0.3: icmp_seq=1 ttl=62 time=5.77 ms
+64 bytes from 10.1.0.3: icmp_seq=2 ttl=62 time=3.05 ms
+
+--- 10.1.0.3 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1002ms
+rtt min/avg/max/mdev = 3.050/4.411/5.772/1.361 ms
+mininet> h1 python3 send.py 10.1.0.3 "test 1" --tunnel 2
+###[ Ethernet ]### 
+  dst       = ff:ff:ff:ff:ff:ff
+  src       = 00:00:00:00:00:01
+  type      = 0x1212
+###[ MyTunnel ]### 
+     proto_id  = 2048
+     dst_id    = 2
+###[ IP ]### 
+        version   = 4
+        ihl       = 5
+        tos       = 0x0
+        len       = 34
+        id        = 1
+        flags     = 
+        frag      = 0
+        ttl       = 64
+        proto     = udp
+        chksum    = 0x66c5
+        src       = 10.1.0.1
+        dst       = 10.1.0.3
+        \options   \
+###[ UDP ]### 
+           sport     = 4321
+           dport     = 4321
+           len       = 14
+           chksum    = 0xc1ff
+###[ Raw ]### 
+              load      = 'test 1'
+
+Sent from h1-eth0.
+mininet> sh sleep 1
+mininet> sh cat logs/h2.txt logs/h3.txt
+Listening on h2-eth0...
+Listening on h3-eth0...
+mininet> sh grep -n -A 12 -B 4 'key is 1212' logs/s1.txt
+945-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Processing packet received on port 1
+946-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Parser 'parser': start
+947-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Parser 'parser' entering state 'start'
+948-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Extracting header 'ethernet'
+949:[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Parser state 'start': key is 1212
+950-[16:40:37.921] [bmv2] [T] [thread 8171] [18.0] [cxt 0] Bytes parsed: 14
+951-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Parser 'parser': end
+952-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Pipeline 'ingress': start
+953-[16:40:37.921] [bmv2] [T] [thread 8171] [18.0] [cxt 0] tunnel.p4(118) Condition "hdr.ipv4.isValid()" (node_2) is false
+954-[16:40:37.921] [bmv2] [T] [thread 8171] [18.0] [cxt 0] Applying table 'tbl_drop'
+955-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Looking up key:
+956-
+957-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Table 'tbl_drop': miss
+958-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Action entry is MyIngress.drop - 
+959-[16:40:37.921] [bmv2] [T] [thread 8171] [18.0] [cxt 0] Action MyIngress.drop
+960-[16:40:37.921] [bmv2] [T] [thread 8171] [18.0] [cxt 0] tunnel.p4(90) Primitive mark_to_drop(standard_metadata)
+961-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Pipeline 'ingress': end
+mininet> sh mkdir -p lab-evidence/steps-1-3
+mininet> sh cp logs/s1.txt logs/s2.txt logs/h2.txt logs/h3.txt lab-evidence/steps-1-3/
+mininet> exit
+*** Stopping 0 controllers
+
+*** Stopping 4 links
+....
+*** Stopping 2 switches
+s1 s2 
+*** Stopping 3 hosts
+h1 h2 h3 
+*** Done
