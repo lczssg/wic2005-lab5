@@ -1,0 +1,120 @@
+Run started (UTC): 2026-11-08T16:45:00.962979+00:00
+*** Compiling tunnel.p4
+*** Configuring hosts
+h1 h2 h3 
+*** Starting controller
+
+*** Starting 2 switches
+s1 s2 
+*** s1: 6 table entries added
+*** s2: 6 table entries added
+*** Your hosts: h1 10.1.0.1, h2 10.1.0.2, h3 10.1.0.3
+*** Ready. Switch logs: logs/s1.txt, logs/s2.txt. What h2 and h3 receive: logs/h2.txt, logs/h3.txt
+*** Starting CLI:
+mininet> sh sleep 1
+mininet> h1 python3 send.py 10.1.0.3 "test 4" --tunnel 2
+###[ Ethernet ]### 
+  dst       = ff:ff:ff:ff:ff:ff
+  src       = 00:00:00:00:00:01
+  type      = 0x1212
+###[ MyTunnel ]### 
+     proto_id  = 2048
+     dst_id    = 2
+###[ IP ]### 
+        version   = 4
+        ihl       = 5
+        tos       = 0x0
+        len       = 34
+        id        = 1
+        flags     = 
+        frag      = 0
+        ttl       = 64
+        proto     = udp
+        chksum    = 0x66c5
+        src       = 10.1.0.1
+        dst       = 10.1.0.3
+        \options   \
+###[ UDP ]### 
+           sport     = 4321
+           dport     = 4321
+           len       = 14
+           chksum    = 0xc1fc
+###[ Raw ]### 
+              load      = 'test 4'
+
+Sent from h1-eth0.
+mininet> sh sleep 1
+mininet> sh cat logs/h2.txt logs/h3.txt
+Listening on h2-eth0...
+Listening on h3-eth0...
+mininet> sh grep -n -A 35 'key is 1212' logs/s1.txt
+55:[16:45:03.317] [bmv2] [D] [thread 11667] [0.0] [cxt 0] Parser state 'start': key is 1212
+56-[16:45:03.317] [bmv2] [T] [thread 11667] [0.0] [cxt 0] Bytes parsed: 14
+57-[16:45:03.317] [bmv2] [D] [thread 11667] [0.0] [cxt 0] Parser 'parser' entering state 'parse_myTunnel'
+58-[16:45:03.317] [bmv2] [D] [thread 11667] [0.0] [cxt 0] Extracting header 'myTunnel'
+59-[16:45:03.317] [bmv2] [D] [thread 11667] [0.0] [cxt 0] Parser state 'parse_myTunnel': key is 0800
+60-[16:45:03.317] [bmv2] [T] [thread 11667] [0.0] [cxt 0] Bytes parsed: 18
+61-[16:45:03.317] [bmv2] [D] [thread 11667] [0.0] [cxt 0] Parser 'parser' entering state 'parse_ipv4'
+62-[16:45:03.317] [bmv2] [D] [thread 11667] [0.0] [cxt 0] Extracting header 'ipv4'
+63-[16:45:03.317] [bmv2] [D] [thread 11667] [0.0] [cxt 0] Parser state 'parse_ipv4' has no switch, going to default next state
+64-[16:45:03.317] [bmv2] [T] [thread 11667] [0.0] [cxt 0] Bytes parsed: 38
+65-[16:45:03.317] [bmv2] [D] [thread 11667] [0.0] [cxt 0] Parser 'parser': end
+66-[16:45:03.317] [bmv2] [D] [thread 11667] [0.0] [cxt 0] Pipeline 'ingress': start
+67-[16:45:03.317] [bmv2] [T] [thread 11667] [0.0] [cxt 0] tunnel.p4(123) Condition "hdr.myTunnel.isValid()" (node_2) is true
+68-[16:45:03.317] [bmv2] [T] [thread 11667] [0.0] [cxt 0] Applying table 'MyIngress.myTunnel_exact'
+69-[16:45:03.317] [bmv2] [D] [thread 11667] [0.0] [cxt 0] Looking up key:
+70-* hdr.myTunnel.dst_id : 0002
+71-
+72-[16:45:03.317] [bmv2] [D] [thread 11667] [0.0] [cxt 0] Table 'MyIngress.myTunnel_exact': hit with handle 1
+73-[16:45:03.317] [bmv2] [D] [thread 11667] [0.0] [cxt 0] Dumping entry 1
+74-Match key:
+75-* hdr.myTunnel.dst_id : EXACT     0002
+76-Action entry: MyIngress.myTunnel_forward - 2,
+77-
+78-[16:45:03.317] [bmv2] [D] [thread 11667] [0.0] [cxt 0] Action entry is MyIngress.myTunnel_forward - 2,
+79-[16:45:03.317] [bmv2] [T] [thread 11667] [0.0] [cxt 0] Action MyIngress.myTunnel_forward
+80-[16:45:03.317] [bmv2] [T] [thread 11667] [0.0] [cxt 0] tunnel.p4(112) Primitive standard_metadata.egress_spec = port
+81-[16:45:03.317] [bmv2] [D] [thread 11667] [0.0] [cxt 0] Pipeline 'ingress': end
+82-[16:45:03.317] [bmv2] [D] [thread 11667] [0.0] [cxt 0] Egress port is 2
+83-[16:45:03.318] [bmv2] [D] [thread 11670] [0.0] [cxt 0] Pipeline 'egress': start
+84-[16:45:03.318] [bmv2] [D] [thread 11670] [0.0] [cxt 0] Pipeline 'egress': end
+85-[16:45:03.318] [bmv2] [D] [thread 11670] [0.0] [cxt 0] Deparser 'deparser': start
+86-[16:45:03.318] [bmv2] [D] [thread 11670] [0.0] [cxt 0] Updating checksum 'cksum'
+87-[16:45:03.318] [bmv2] [D] [thread 11670] [0.0] [cxt 0] Deparsing header 'ethernet'
+88-[16:45:03.318] [bmv2] [D] [thread 11670] [0.0] [cxt 0] Deparsing header 'ipv4'
+89-[16:45:03.318] [bmv2] [D] [thread 11670] [0.0] [cxt 0] Deparser 'deparser': end
+90-[16:45:03.318] [bmv2] [D] [thread 11672] [0.0] [cxt 0] Transmitting packet of size 48 out of port 2
+mininet> sh grep -n -A 35 'key is 1212' logs/s2.txt
+56:[16:45:03.318] [bmv2] [D] [thread 11684] [0.0] [cxt 0] Parser state 'start': key is 1212
+57-[16:45:03.318] [bmv2] [T] [thread 11684] [0.0] [cxt 0] Bytes parsed: 14
+58-[16:45:03.318] [bmv2] [D] [thread 11684] [0.0] [cxt 0] Parser 'parser' entering state 'parse_myTunnel'
+59-[16:45:03.318] [bmv2] [D] [thread 11684] [0.0] [cxt 0] Extracting header 'myTunnel'
+60-[16:45:03.318] [bmv2] [D] [thread 11684] [0.0] [cxt 0] Parser state 'parse_myTunnel': key is 4500
+61-[16:45:03.318] [bmv2] [T] [thread 11684] [0.0] [cxt 0] Bytes parsed: 18
+62-[16:45:03.318] [bmv2] [D] [thread 11684] [0.0] [cxt 0] Parser 'parser': end
+63-[16:45:03.318] [bmv2] [D] [thread 11684] [0.0] [cxt 0] Pipeline 'ingress': start
+64-[16:45:03.318] [bmv2] [T] [thread 11684] [0.0] [cxt 0] tunnel.p4(123) Condition "hdr.myTunnel.isValid()" (node_2) is true
+65-[16:45:03.318] [bmv2] [T] [thread 11684] [0.0] [cxt 0] Applying table 'MyIngress.myTunnel_exact'
+66-[16:45:03.318] [bmv2] [D] [thread 11684] [0.0] [cxt 0] Looking up key:
+67-* hdr.myTunnel.dst_id : 0022
+68-
+69-[16:45:03.318] [bmv2] [D] [thread 11684] [0.0] [cxt 0] Table 'MyIngress.myTunnel_exact': miss
+70-[16:45:03.318] [bmv2] [D] [thread 11684] [0.0] [cxt 0] Action entry is MyIngress.drop - 
+71-[16:45:03.318] [bmv2] [T] [thread 11684] [0.0] [cxt 0] Action MyIngress.drop
+72-[16:45:03.319] [bmv2] [T] [thread 11684] [0.0] [cxt 0] tunnel.p4(96) Primitive mark_to_drop(standard_metadata)
+73-[16:45:03.319] [bmv2] [D] [thread 11684] [0.0] [cxt 0] Pipeline 'ingress': end
+74-[16:45:03.319] [bmv2] [D] [thread 11684] [0.0] [cxt 0] Egress port is 511
+75-[16:45:03.319] [bmv2] [D] [thread 11684] [0.0] [cxt 0] Dropping packet at the end of ingress
+mininet> sh mkdir -p lab-evidence/step-6
+mininet> sh cp logs/s1.txt logs/s2.txt logs/h2.txt logs/h3.txt lab-evidence/step-6/
+mininet> sh cp tunnel.p4 lab-evidence/step-6/broken-deparser.p4
+mininet> exit
+*** Stopping 0 controllers
+
+*** Stopping 4 links
+....
+*** Stopping 2 switches
+s1 s2 
+*** Stopping 3 hosts
+h1 h2 h3 
+*** Done
