@@ -1,0 +1,8 @@
+sh sleep 1
+h1 python3 send.py 10.1.0.3 "test 2" --tunnel 2
+sh sleep 1
+sh cat logs/h2.txt logs/h3.txt
+sh grep -n -A 30 'key is 1212' logs/s1.txt
+sh mkdir -p lab-evidence/step-4
+sh cp logs/s1.txt logs/s2.txt logs/h2.txt logs/h3.txt lab-evidence/step-4/
+exit

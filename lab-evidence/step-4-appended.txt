@@ -1,0 +1,133 @@
+*** Compiling tunnel.p4
+*** Configuring hosts
+h1 h2 h3 
+*** Starting controller
+
+*** Starting 2 switches
+s1 s2 
+*** s1: MyIngress.myTunnel_exact isn't used by the program (yet), so its entries were skipped
+*** s1: 3 table entries added
+*** s2: MyIngress.myTunnel_exact isn't used by the program (yet), so its entries were skipped
+*** s2: 3 table entries added
+*** Your hosts: h1 10.1.0.1, h2 10.1.0.2, h3 10.1.0.3
+*** Ready. Switch logs: logs/s1.txt, logs/s2.txt. What h2 and h3 receive: logs/h2.txt, logs/h3.txt
+*** Starting CLI:
+tunnel.p4(115): [--Wwarn=unused] warning: table 'myTunnel_exact' is unused
+    table myTunnel_exact {
+          ^^^^^^^^^^^^^^
+tunnel.p4(115): [--Winfo=removed] info: removing table 'myTunnel_exact'
+    table myTunnel_exact {
+          ^^^^^^^^^^^^^^
+mininet> sh sleep 1
+mininet> h1 python3 send.py 10.1.0.3 "test 2" --tunnel 2
+###[ Ethernet ]### 
+  dst       = ff:ff:ff:ff:ff:ff
+  src       = 00:00:00:00:00:01
+  type      = 0x1212
+###[ MyTunnel ]### 
+     proto_id  = 2048
+     dst_id    = 2
+###[ IP ]### 
+        version   = 4
+        ihl       = 5
+        tos       = 0x0
+        len       = 34
+        id        = 1
+        flags     = 
+        frag      = 0
+        ttl       = 64
+        proto     = udp
+        chksum    = 0x66c5
+        src       = 10.1.0.1
+        dst       = 10.1.0.3
+        \options   \
+###[ UDP ]### 
+           sport     = 4321
+           dport     = 4321
+           len       = 14
+           chksum    = 0xc1fe
+###[ Raw ]### 
+              load      = 'test 2'
+
+Sent from h1-eth0.
+mininet> sh sleep 1
+mininet> sh cat logs/h2.txt logs/h3.txt
+Listening on h2-eth0...
+Listening on h3-eth0...
+Received (tunnelled, dst_id=2) from 10.1.0.1 to 10.1.0.3, TTL 62: 'test 2'
+mininet> sh grep -n -A 30 'key is 1212' logs/s1.txt
+949:[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Parser state 'start': key is 1212
+950-[16:40:37.921] [bmv2] [T] [thread 8171] [18.0] [cxt 0] Bytes parsed: 14
+951-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Parser 'parser': end
+952-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Pipeline 'ingress': start
+953-[16:40:37.921] [bmv2] [T] [thread 8171] [18.0] [cxt 0] tunnel.p4(118) Condition "hdr.ipv4.isValid()" (node_2) is false
+954-[16:40:37.921] [bmv2] [T] [thread 8171] [18.0] [cxt 0] Applying table 'tbl_drop'
+955-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Looking up key:
+956-
+957-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Table 'tbl_drop': miss
+958-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Action entry is MyIngress.drop - 
+959-[16:40:37.921] [bmv2] [T] [thread 8171] [18.0] [cxt 0] Action MyIngress.drop
+960-[16:40:37.921] [bmv2] [T] [thread 8171] [18.0] [cxt 0] tunnel.p4(90) Primitive mark_to_drop(standard_metadata)
+961-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Pipeline 'ingress': end
+962-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Egress port is 511
+963-[16:40:37.921] [bmv2] [D] [thread 8171] [18.0] [cxt 0] Dropping packet at the end of ingress
+964-[16:42:19.156] [bmv2] [D] [thread 9379] Set default default entry for table 'MyIngress.ipv4_lpm': MyIngress.drop - 
+965-[16:42:19.156] [bmv2] [D] [thread 9379] Set default default entry for table 'tbl_drop': MyIngress.drop - 
+966-[16:42:19.158] [bmv2] [D] [thread 9379] Adding interface s1-eth1 as port 1
+967-[16:42:19.161] [bmv2] [D] [thread 9379] Adding interface s1-eth2 as port 2
+968-[16:42:19.166] [bmv2] [I] [thread 9379] Starting Thrift server on port 9090
+969-[16:42:19.166] [bmv2] [I] [thread 9379] Thrift server was started
+970-[16:42:19.430] [bmv2] [T] [thread 9417] bm_get_config
+971-[16:42:19.431] [bmv2] [T] [thread 9417] bm_table_add_entry
+972-[16:42:19.431] [bmv2] [D] [thread 9417] Entry 0 added to table 'MyIngress.ipv4_lpm'
+973-[16:42:19.431] [bmv2] [D] [thread 9417] Dumping entry 0
+974-Match key:
+975-* hdr.ipv4.dstAddr    : LPM       0a010001/32
+976-Action entry: MyIngress.ipv4_forward - 1,
+977-
+978-[16:42:19.431] [bmv2] [T] [thread 9417] bm_table_add_entry
+979-[16:42:19.432] [bmv2] [D] [thread 9417] Entry 1 added to table 'MyIngress.ipv4_lpm'
+--
+996:[16:42:20.839] [bmv2] [D] [thread 9385] [0.0] [cxt 0] Parser state 'start': key is 1212
+997-[16:42:20.839] [bmv2] [T] [thread 9385] [0.0] [cxt 0] Bytes parsed: 14
+998-[16:42:20.839] [bmv2] [D] [thread 9385] [0.0] [cxt 0] Parser 'parser' entering state 'parse_myTunnel'
+999-[16:42:20.839] [bmv2] [D] [thread 9385] [0.0] [cxt 0] Extracting header 'myTunnel'
+1000-[16:42:20.839] [bmv2] [D] [thread 9385] [0.0] [cxt 0] Parser state 'parse_myTunnel': key is 0800
+1001-[16:42:20.839] [bmv2] [T] [thread 9385] [0.0] [cxt 0] Bytes parsed: 18
+1002-[16:42:20.839] [bmv2] [D] [thread 9385] [0.0] [cxt 0] Parser 'parser' entering state 'parse_ipv4'
+1003-[16:42:20.839] [bmv2] [D] [thread 9385] [0.0] [cxt 0] Extracting header 'ipv4'
+1004-[16:42:20.839] [bmv2] [D] [thread 9385] [0.0] [cxt 0] Parser state 'parse_ipv4' has no switch, going to default next state
+1005-[16:42:20.839] [bmv2] [T] [thread 9385] [0.0] [cxt 0] Bytes parsed: 38
+1006-[16:42:20.839] [bmv2] [D] [thread 9385] [0.0] [cxt 0] Parser 'parser': end
+1007-[16:42:20.839] [bmv2] [D] [thread 9385] [0.0] [cxt 0] Pipeline 'ingress': start
+1008-[16:42:20.839] [bmv2] [T] [thread 9385] [0.0] [cxt 0] tunnel.p4(124) Condition "hdr.ipv4.isValid()" (node_2) is true
+1009-[16:42:20.839] [bmv2] [T] [thread 9385] [0.0] [cxt 0] Applying table 'MyIngress.ipv4_lpm'
+1010-[16:42:20.839] [bmv2] [D] [thread 9385] [0.0] [cxt 0] Looking up key:
+1011-* hdr.ipv4.dstAddr    : 0a010003
+1012-
+1013-[16:42:20.839] [bmv2] [D] [thread 9385] [0.0] [cxt 0] Table 'MyIngress.ipv4_lpm': hit with handle 2
+1014-[16:42:20.839] [bmv2] [D] [thread 9385] [0.0] [cxt 0] Dumping entry 2
+1015-Match key:
+1016-* hdr.ipv4.dstAddr    : LPM       0a010003/32
+1017-Action entry: MyIngress.ipv4_forward - 2,
+1018-
+1019-[16:42:20.839] [bmv2] [D] [thread 9385] [0.0] [cxt 0] Action entry is MyIngress.ipv4_forward - 2,
+1020-[16:42:20.839] [bmv2] [T] [thread 9385] [0.0] [cxt 0] Action MyIngress.ipv4_forward
+1021-[16:42:20.839] [bmv2] [T] [thread 9385] [0.0] [cxt 0] tunnel.p4(100) Primitive standard_metadata.egress_spec = port
+1022-[16:42:20.839] [bmv2] [T] [thread 9385] [0.0] [cxt 0] tunnel.p4(101) Primitive hdr.ipv4.ttl = hdr.ipv4.ttl - 1
+1023-[16:42:20.839] [bmv2] [D] [thread 9385] [0.0] [cxt 0] Pipeline 'ingress': end
+1024-[16:42:20.839] [bmv2] [D] [thread 9385] [0.0] [cxt 0] Egress port is 2
+1025-[16:42:20.839] [bmv2] [D] [thread 9388] [0.0] [cxt 0] Pipeline 'egress': start
+1026-[16:42:20.839] [bmv2] [D] [thread 9388] [0.0] [cxt 0] Pipeline 'egress': end
+mininet> sh mkdir -p lab-evidence/step-4
+mininet> sh cp logs/s1.txt logs/s2.txt logs/h2.txt logs/h3.txt lab-evidence/step-4/
+mininet> exit
+*** Stopping 0 controllers
+
+*** Stopping 4 links
+....
+*** Stopping 2 switches
+s1 s2 
+*** Stopping 3 hosts
+h1 h2 h3 
+*** Done
